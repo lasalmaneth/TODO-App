@@ -29,7 +29,6 @@ namespace TodoApp.Controllers
             return Ok(todos);
         }
 
-        // GET: api/todos/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Todo>> GetTodo(int id)
         {
