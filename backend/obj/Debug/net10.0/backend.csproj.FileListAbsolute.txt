@@ -1,0 +1,9 @@
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.csproj.AssemblyReference.cache
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/rpswa.dswa.cache.json
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.GeneratedMSBuildEditorConfig.editorconfig
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.AssemblyInfoInputs.cache
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.AssemblyInfo.cs
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.csproj.CoreCompileInputs.cache
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.MvcApplicationPartsAssemblyInfo.cs
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.MvcApplicationPartsAssemblyInfo.cache
+/Users/lasal/TODO-App/backend/obj/Debug/net10.0/backend.sourcelink.json
