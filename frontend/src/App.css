@@ -10,7 +10,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background:
+    radial-gradient(circle at top, rgba(74, 222, 128, 0.16), transparent 30%),
+    linear-gradient(135deg, #06110b 0%, #0b1f13 45%, #132f1d 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -28,7 +30,7 @@ body {
 .dashboard {
   text-align: center;
   color: white;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(7, 24, 14, 0.75);
   padding: 40px;
   border-radius: 12px;
   backdrop-filter: blur(10px);
@@ -42,7 +44,7 @@ body {
 .dashboard button {
   padding: 10px 30px;
   font-size: 1rem;
-  background-color: #c084fc;
+  background-color: #22c55e;
   color: white;
   border: none;
   border-radius: 8px;
@@ -51,5 +53,5 @@ body {
 }
 
 .dashboard button:hover {
-  background-color: #a855f7;
+  background-color: #16a34a;
 }
