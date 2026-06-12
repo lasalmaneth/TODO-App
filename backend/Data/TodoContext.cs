@@ -6,6 +6,7 @@ namespace TodoApp.Data {
         public TodoContext(DbContextOptions<TodoContext> options) : base(options) {}
         public DbSet<Todo> Todos { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<TaskItem> TaskItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -14,6 +15,10 @@ namespace TodoApp.Data {
             modelBuilder.Entity<User>()
                 .HasIndex(user => user.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<TaskItem>()
+                .Property(task => task.ImportanceLevel)
+                .HasMaxLength(20);
         }
     }
 }

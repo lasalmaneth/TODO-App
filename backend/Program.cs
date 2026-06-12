@@ -27,6 +27,17 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<TodoContext>();
     dbContext.Database.EnsureCreated();
+    dbContext.Database.ExecuteSqlRaw("""
+        CREATE TABLE IF NOT EXISTS "TaskItems" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_TaskItems" PRIMARY KEY AUTOINCREMENT,
+            "Title" TEXT NOT NULL,
+            "IsLongTask" INTEGER NOT NULL,
+            "DueDate" TEXT NULL,
+            "ImportanceLevel" TEXT NOT NULL,
+            "OwnerEmail" TEXT NOT NULL,
+            "CreatedAt" TEXT NOT NULL
+        );
+    """);
 }
 
 app.UseHttpsRedirection();

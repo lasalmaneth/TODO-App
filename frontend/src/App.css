@@ -156,6 +156,57 @@ body {
   line-height: 1.6;
 }
 
+.task-form {
+  display: grid;
+  gap: 16px;
+}
+
+.task-form h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0;
+}
+
+.task-form label {
+  display: grid;
+  gap: 8px;
+  color: #eefdf1;
+  font-weight: 600;
+}
+
+.task-form input,
+.task-form select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(134, 239, 172, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f3fff5;
+  font-size: 1rem;
+  outline: none;
+}
+
+.task-form input:focus,
+.task-form select:focus {
+  border-color: rgba(74, 222, 128, 0.72);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
+}
+
+.task-submit-button {
+  width: fit-content;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.task-message {
+  color: #bbf7d0;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
   .home-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -182,5 +233,9 @@ body {
 
   .home-panel {
     padding: 22px;
+  }
+
+  .task-submit-button {
+    width: 100%;
   }
 }
