@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import Register from './components/Register'
@@ -15,6 +15,52 @@ function App() {
     importanceLevel: 'Medium',
   })
   const [taskMessage, setTaskMessage] = useState('')
+  const [tasks, setTasks] = useState([])
+  const [loadingTasks, setLoadingTasks] = useState(false)
+  const [tasksError, setTasksError] = useState('')
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [detailChecks, setDetailChecks] = useState({ completed: false, followUp: false, flagged: false })
+
+  const storageKeyForUser = (u) => `taskDetailsStates_${u}`
+
+  const openDetails = (task) => {
+    setSelectedTask(task)
+    try {
+      const key = storageKeyForUser(user || 'default')
+      const raw = localStorage.getItem(key)
+      if (raw) {
+        const map = JSON.parse(raw)
+        const id = task.id ?? task.Id
+        if (map && map[id]) {
+          setDetailChecks(map[id])
+          return
+        }
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+    setDetailChecks({ completed: false, followUp: false, flagged: false })
+  }
+
+  const toggleDetailCheck = (e) => {
+    const { name, checked } = e.target
+    setDetailChecks((c) => ({ ...c, [name]: checked }))
+  }
+
+  const saveDetailChecks = () => {
+    if (!selectedTask) return
+    try {
+      const key = storageKeyForUser(user || 'default')
+      const raw = localStorage.getItem(key)
+      const map = raw ? JSON.parse(raw) : {}
+      const id = selectedTask.id ?? selectedTask.Id
+      map[id] = detailChecks
+      localStorage.setItem(key, JSON.stringify(map))
+      setTaskMessage('Details saved locally.')
+    } catch (e) {
+      setTaskMessage('Failed to save details: ' + e.message)
+    }
+  }
 
   const handleLogin = (email) => {
     setIsAuthenticated(true)
@@ -99,6 +145,29 @@ function App() {
     }
   }
 
+  const fetchTasks = async () => {
+    if (!user) return
+    setLoadingTasks(true)
+    setTasksError('')
+    try {
+      const q = encodeURIComponent(user)
+      const res = await fetch(`http://localhost:5072/api/tasks?ownerEmail=${q}`)
+      if (!res.ok) throw new Error((await res.text()) || 'Failed to load tasks')
+      const data = await res.json()
+      setTasks(data)
+    } catch (e) {
+      setTasksError(e.message)
+    } finally {
+      setLoadingTasks(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'view') {
+      fetchTasks()
+    }
+  }, [activeTab, user])
+
   const HomePage = () => (
     <div className="home-page">
       <div className="home-header">
@@ -175,6 +244,74 @@ function App() {
 
             {taskMessage && <p className="task-message">{taskMessage}</p>}
           </form>
+        ) : activeTab === 'view' ? (
+          <div>
+            <h2>View My Tasks</h2>
+            {loadingTasks ? (
+              <p>Loading tasks…</p>
+            ) : tasks.length === 0 ? (
+              <p>No tasks found yet.</p>
+            ) : (
+              <table className="tasks-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Long Task</th>
+                    <th>Due Date</th>
+                    <th>Importance</th>
+                      <th>Created At</th>
+                      <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.map((t) => (
+                    <tr key={t.id ?? t.Id}>
+                      <td>{t.title ?? t.Title}</td>
+                      <td>{(t.isLongTask ?? t.IsLongTask) ? 'Yes' : 'No'}</td>
+                      <td>{t.dueDate ?? t.DueDate ?? '-'}</td>
+                      <td>{t.importanceLevel ?? t.ImportanceLevel}</td>
+                      <td>{t.createdAt ?? t.CreatedAt}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => openDetails(t)}
+                          className="view-details-button"
+                        >
+                          View details
+                        </button>
+                      </td>
+                      </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {selectedTask && (
+              <div className="task-details">
+                <h3>Details — {selectedTask.title ?? selectedTask.Title}</h3>
+                <p><strong>Created At:</strong> {selectedTask.createdAt ?? selectedTask.CreatedAt}</p>
+                <p><strong>Due Date:</strong> {selectedTask.dueDate ?? selectedTask.DueDate ?? '-'}</p>
+                <p><strong>Importance:</strong> {selectedTask.importanceLevel ?? selectedTask.ImportanceLevel}</p>
+
+                <div className="detail-checkboxes">
+                  <label>
+                    <input type="checkbox" name="completed" checked={detailChecks.completed} onChange={toggleDetailCheck} /> Completed
+                  </label>
+                  <label>
+                    <input type="checkbox" name="followUp" checked={detailChecks.followUp} onChange={toggleDetailCheck} /> Requires follow-up
+                  </label>
+                  <label>
+                    <input type="checkbox" name="flagged" checked={detailChecks.flagged} onChange={toggleDetailCheck} /> Flagged
+                  </label>
+                </div>
+
+                <div style={{marginTop:10}}>
+                  <button type="button" onClick={saveDetailChecks} className="task-submit-button">Save</button>
+                  <button type="button" onClick={() => setSelectedTask(null)} style={{marginLeft:8}}>Close</button>
+                </div>
+              </div>
+            )}
+            {tasksError && <p className="task-message">{tasksError}</p>}
+          </div>
         ) : (
           <>
             <h2>{tabs.find((tab) => tab.id === activeTab)?.label}</h2>
