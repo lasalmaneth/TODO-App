@@ -7,11 +7,29 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (email && password) {
-      onLogin(email)
-      navigate('/')
+      try {
+        const response = await fetch('http://localhost:5072/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText || 'Login failed')
+        }
+
+        const result = await response.json()
+        onLogin(result.email)
+        navigate('/')
+      } catch (error) {
+        alert(error.message)
+      }
     }
   }
 

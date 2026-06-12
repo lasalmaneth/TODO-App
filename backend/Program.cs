@@ -7,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<TodoContext>(options =>
     options.UseSqlite("Data Source=todos.db"));
 
@@ -24,11 +23,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Enable Swagger UI in development.
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TodoContext>();
+    dbContext.Database.EnsureCreated();
 }
 
 app.UseHttpsRedirection();
