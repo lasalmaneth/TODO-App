@@ -55,3 +55,132 @@ body {
 .dashboard button:hover {
   background-color: #16a34a;
 }
+
+.home-page {
+  width: min(1100px, calc(100vw - 32px));
+  min-height: 100vh;
+  padding: 40px 0;
+  color: #f3fff5;
+}
+
+.home-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.home-kicker {
+  color: #86efac;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+
+.home-header h1 {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.home-subtitle {
+  color: #b9eac5;
+  font-size: 1rem;
+}
+
+.logout-button {
+  padding: 12px 18px;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  background: rgba(8, 25, 15, 0.8);
+  color: #dcfce7;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  transform: translateY(-1px);
+  background: rgba(20, 83, 45, 0.95);
+}
+
+.home-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.home-tab {
+  min-height: 92px;
+  padding: 18px 14px;
+  border: 1px solid rgba(134, 239, 172, 0.2);
+  background: rgba(8, 25, 15, 0.72);
+  color: #f3fff5;
+  border-radius: 18px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-tab:hover {
+  transform: translateY(-2px);
+  border-color: rgba(74, 222, 128, 0.55);
+  box-shadow: 0 14px 30px rgba(2, 12, 6, 0.25);
+}
+
+.home-tab.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: transparent;
+  box-shadow: 0 16px 32px rgba(34, 197, 94, 0.28);
+}
+
+.home-panel {
+  background: rgba(8, 25, 15, 0.76);
+  border: 1px solid rgba(74, 222, 128, 0.16);
+  border-radius: 22px;
+  padding: 30px;
+  box-shadow: 0 18px 50px rgba(2, 12, 6, 0.34);
+}
+
+.home-panel h2 {
+  font-size: 1.6rem;
+  margin-bottom: 10px;
+}
+
+.home-panel p {
+  color: #b9eac5;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .home-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-page {
+    width: calc(100vw - 24px);
+    padding: 22px 0;
+  }
+
+  .home-header h1 {
+    font-size: 2.1rem;
+  }
+
+  .home-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .home-panel {
+    padding: 22px;
+  }
+}
