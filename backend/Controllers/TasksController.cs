@@ -52,4 +52,53 @@ public class TasksController : ControllerBase
 
         return CreatedAtAction(nameof(GetTasks), new { id = task.Id }, task);
     }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<TaskItem>> UpdateTask(int id, [FromBody] TaskItem updatedTask)
+    {
+        var task = await _context.TaskItems.FirstOrDefaultAsync(item => item.Id == id);
+        if (task is null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(updatedTask.Title))
+        {
+            return BadRequest("Title is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(updatedTask.OwnerEmail) &&
+            !string.Equals(task.OwnerEmail, updatedTask.OwnerEmail.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Task owner does not match.");
+        }
+
+        task.Title = updatedTask.Title.Trim();
+        task.IsLongTask = updatedTask.IsLongTask;
+        task.DueDate = updatedTask.IsLongTask ? updatedTask.DueDate : null;
+        task.ImportanceLevel = string.IsNullOrWhiteSpace(updatedTask.ImportanceLevel) ? task.ImportanceLevel : updatedTask.ImportanceLevel;
+
+        await _context.SaveChangesAsync();
+        return Ok(task);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteTask(int id, [FromQuery] string? ownerEmail = null)
+    {
+        var task = await _context.TaskItems.FirstOrDefaultAsync(item => item.Id == id);
+        if (task is null)
+        {
+            return NotFound();
+        }
+
+        if (!string.IsNullOrWhiteSpace(ownerEmail) &&
+            !string.Equals(task.OwnerEmail, ownerEmail.Trim().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest("Task owner does not match.");
+        }
+
+        _context.TaskItems.Remove(task);
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
 }

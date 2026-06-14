@@ -20,6 +20,13 @@ function App() {
   const [tasksError, setTasksError] = useState('')
   const [selectedTask, setSelectedTask] = useState(null)
   const [detailChecks, setDetailChecks] = useState({ completed: false, followUp: false, flagged: false })
+  const [editingTask, setEditingTask] = useState(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    isLongTask: 'no',
+    dueDate: '',
+    importanceLevel: 'Medium',
+  })
 
   const storageKeyForUser = (u) => `taskDetailsStates_${u}`
 
@@ -45,6 +52,89 @@ function App() {
   const toggleDetailCheck = (e) => {
     const { name, checked } = e.target
     setDetailChecks((c) => ({ ...c, [name]: checked }))
+  }
+
+  const getTaskId = (task) => task.id ?? task.Id
+
+  const openEditTask = (task) => {
+    const isLongTask = task.isLongTask ?? task.IsLongTask
+    setEditingTask(task)
+    setEditForm({
+      title: task.title ?? task.Title ?? '',
+      isLongTask: isLongTask ? 'yes' : 'no',
+      dueDate: (task.dueDate ?? task.DueDate ?? '').toString().slice(0, 10),
+      importanceLevel: task.importanceLevel ?? task.ImportanceLevel ?? 'Medium',
+    })
+    setActiveTab('edit')
+  }
+
+  const handleEditTaskChange = (event) => {
+    const { name, value } = event.target
+    setEditForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === 'isLongTask' && value === 'no' ? { dueDate: '' } : {}),
+    }))
+  }
+
+  const handleUpdateTask = async (event) => {
+    event.preventDefault()
+    if (!editingTask) return
+
+    try {
+      const response = await fetch(`http://localhost:5072/api/tasks/${getTaskId(editingTask)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editForm.title,
+          isLongTask: editForm.isLongTask === 'yes',
+          dueDate: editForm.dueDate || null,
+          importanceLevel: editForm.importanceLevel,
+          ownerEmail: user,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to update task')
+      }
+
+      setTaskMessage('Task updated successfully.')
+      setEditingTask(null)
+      setSelectedTask(null)
+      await fetchTasks()
+      setActiveTab('view')
+    } catch (error) {
+      setTaskMessage(error.message)
+    }
+  }
+
+  const handleDeleteTask = async (task) => {
+    const confirmed = window.confirm(`Delete "${task.title ?? task.Title}"?`)
+    if (!confirmed) return
+
+    try {
+      const response = await fetch(
+        `http://localhost:5072/api/tasks/${getTaskId(task)}?ownerEmail=${encodeURIComponent(user)}`,
+        { method: 'DELETE' }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to delete task')
+      }
+
+      setTaskMessage('Task deleted successfully.')
+      if (editingTask && getTaskId(editingTask) === getTaskId(task)) {
+        setEditingTask(null)
+      }
+      if (selectedTask && getTaskId(selectedTask) === getTaskId(task)) {
+        setSelectedTask(null)
+      }
+      await fetchTasks()
+    } catch (error) {
+      setTaskMessage(error.message)
+    }
   }
 
   const saveDetailChecks = () => {
@@ -163,10 +253,76 @@ function App() {
   }
 
   useEffect(() => {
-    if (activeTab === 'view') {
+    if (activeTab === 'view' || activeTab === 'portfolio') {
       fetchTasks()
     }
   }, [activeTab, user])
+
+  const renderTaskTable = (heading) => (
+    <div>
+      <h2>{heading}</h2>
+      {loadingTasks ? (
+        <p>Loading tasks…</p>
+      ) : tasks.length === 0 ? (
+        <p>No tasks found yet.</p>
+      ) : (
+        <table className="tasks-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task) => (
+              <tr key={getTaskId(task)}>
+                <td>{task.title ?? task.Title}</td>
+                <td>{task.createdAt ?? task.CreatedAt}</td>
+                <td className="task-actions">
+                  <button type="button" onClick={() => openDetails(task)} className="view-details-button">
+                    View details
+                  </button>
+                  <button type="button" onClick={() => openEditTask(task)} className="view-details-button">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDeleteTask(task)} className="view-details-button danger">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {selectedTask && (
+        <div className="task-details">
+          <h3>Details — {selectedTask.title ?? selectedTask.Title}</h3>
+          <p><strong>Created At:</strong> {selectedTask.createdAt ?? selectedTask.CreatedAt}</p>
+          <p><strong>Due Date:</strong> {selectedTask.dueDate ?? selectedTask.DueDate ?? '-'}</p>
+          <p><strong>Importance:</strong> {selectedTask.importanceLevel ?? selectedTask.ImportanceLevel}</p>
+
+          <div className="detail-checkboxes">
+            <label>
+              <input type="checkbox" name="completed" checked={detailChecks.completed} onChange={toggleDetailCheck} /> Completed
+            </label>
+            <label>
+              <input type="checkbox" name="followUp" checked={detailChecks.followUp} onChange={toggleDetailCheck} /> Requires follow-up
+            </label>
+            <label>
+              <input type="checkbox" name="flagged" checked={detailChecks.flagged} onChange={toggleDetailCheck} /> Flagged
+            </label>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <button type="button" onClick={saveDetailChecks} className="task-submit-button">Save</button>
+            <button type="button" onClick={() => setSelectedTask(null)} style={{ marginLeft: 8 }}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 
   const HomePage = () => (
     <div className="home-page">
@@ -246,71 +402,73 @@ function App() {
           </form>
         ) : activeTab === 'view' ? (
           <div>
-            <h2>View My Tasks</h2>
-            {loadingTasks ? (
-              <p>Loading tasks…</p>
-            ) : tasks.length === 0 ? (
-              <p>No tasks found yet.</p>
-            ) : (
-              <table className="tasks-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Long Task</th>
-                    <th>Due Date</th>
-                    <th>Importance</th>
-                      <th>Created At</th>
-                      <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.map((t) => (
-                    <tr key={t.id ?? t.Id}>
-                      <td>{t.title ?? t.Title}</td>
-                      <td>{(t.isLongTask ?? t.IsLongTask) ? 'Yes' : 'No'}</td>
-                      <td>{t.dueDate ?? t.DueDate ?? '-'}</td>
-                      <td>{t.importanceLevel ?? t.ImportanceLevel}</td>
-                      <td>{t.createdAt ?? t.CreatedAt}</td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() => openDetails(t)}
-                          className="view-details-button"
-                        >
-                          View details
-                        </button>
-                      </td>
-                      </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {selectedTask && (
-              <div className="task-details">
-                <h3>Details — {selectedTask.title ?? selectedTask.Title}</h3>
-                <p><strong>Created At:</strong> {selectedTask.createdAt ?? selectedTask.CreatedAt}</p>
-                <p><strong>Due Date:</strong> {selectedTask.dueDate ?? selectedTask.DueDate ?? '-'}</p>
-                <p><strong>Importance:</strong> {selectedTask.importanceLevel ?? selectedTask.ImportanceLevel}</p>
-
-                <div className="detail-checkboxes">
-                  <label>
-                    <input type="checkbox" name="completed" checked={detailChecks.completed} onChange={toggleDetailCheck} /> Completed
-                  </label>
-                  <label>
-                    <input type="checkbox" name="followUp" checked={detailChecks.followUp} onChange={toggleDetailCheck} /> Requires follow-up
-                  </label>
-                  <label>
-                    <input type="checkbox" name="flagged" checked={detailChecks.flagged} onChange={toggleDetailCheck} /> Flagged
-                  </label>
-                </div>
-
-                <div style={{marginTop:10}}>
-                  <button type="button" onClick={saveDetailChecks} className="task-submit-button">Save</button>
-                  <button type="button" onClick={() => setSelectedTask(null)} style={{marginLeft:8}}>Close</button>
-                </div>
-              </div>
-            )}
+            {renderTaskTable('View My Tasks')}
             {tasksError && <p className="task-message">{tasksError}</p>}
+          </div>
+        ) : activeTab === 'portfolio' ? (
+          <div>
+            {renderTaskTable('My Portfolio')}
+            {tasksError && <p className="task-message">{tasksError}</p>}
+          </div>
+        ) : activeTab === 'edit' ? (
+          <div className="task-form">
+            <h2>Edit a Task</h2>
+            {editingTask ? (
+              <form className="task-form" onSubmit={handleUpdateTask}>
+                <label>
+                  Task Title
+                  <input
+                    type="text"
+                    name="title"
+                    value={editForm.title}
+                    onChange={handleEditTaskChange}
+                  />
+                </label>
+
+                <label>
+                  Is it a long task?
+                  <select name="isLongTask" value={editForm.isLongTask} onChange={handleEditTaskChange}>
+                    <option value="no">No, it is a short task</option>
+                    <option value="yes">Yes, it is a long task</option>
+                  </select>
+                </label>
+
+                {editForm.isLongTask === 'yes' && (
+                  <label>
+                    Select Date
+                    <input
+                      type="date"
+                      name="dueDate"
+                      value={editForm.dueDate}
+                      onChange={handleEditTaskChange}
+                    />
+                  </label>
+                )}
+
+                <label>
+                  Importance Level
+                  <select name="importanceLevel" value={editForm.importanceLevel} onChange={handleEditTaskChange}>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button type="submit" className="task-submit-button">Update Task</button>
+                  <button type="button" onClick={() => setEditingTask(null)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <p>Choose Edit from the task list in View My Tasks or My Portfolio.</p>
+                {tasks.length > 0 && (
+                  <button type="button" onClick={() => setActiveTab('view')} className="task-submit-button">
+                    Go to task list
+                  </button>
+                )}
+              </>
+            )}
           </div>
         ) : (
           <>
