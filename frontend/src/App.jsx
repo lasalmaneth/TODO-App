@@ -4,6 +4,56 @@ import Login from './components/Login'
 import Register from './components/Register'
 import './App.css'
 
+const getImportanceNumeric = (level) => {
+  if (!level) return 3;
+  const levelStr = level.toString().trim();
+  if (levelStr === '5' || levelStr === 'High') return 5;
+  if (levelStr === '4') return 4;
+  if (levelStr === '3' || levelStr === 'Medium') return 3;
+  if (levelStr === '2') return 2;
+  if (levelStr === '1' || levelStr === 'Low') return 1;
+  const parsed = parseInt(levelStr, 10);
+  return isNaN(parsed) ? 3 : parsed;
+};
+
+// Custom Quick Sort implementation (DSA)
+// Sorts tasks by importance Level descending (highest importance/5 loads first)
+// If importance levels are equal, we sort by CreatedAt descending.
+function quickSortTasks(arr) {
+  if (arr.length <= 1) return arr;
+
+  const pivot = arr[Math.floor(arr.length / 2)];
+  const pivotImportance = getImportanceNumeric(pivot.importanceLevel ?? pivot.ImportanceLevel);
+  const pivotTime = new Date(pivot.createdAt ?? pivot.CreatedAt ?? 0).getTime();
+
+  const left = [];
+  const middle = [];
+  const right = [];
+
+  for (const task of arr) {
+    const taskImportance = getImportanceNumeric(task.importanceLevel ?? task.ImportanceLevel);
+    const taskTime = new Date(task.createdAt ?? task.CreatedAt ?? 0).getTime();
+
+    if (taskImportance > pivotImportance) {
+      // Higher importance should load first, so place on the left (descending order)
+      left.push(task);
+    } else if (taskImportance < pivotImportance) {
+      right.push(task);
+    } else {
+      // If importance level is equal, compare by created date descending (newest first)
+      if (taskTime > pivotTime) {
+        left.push(task);
+      } else if (taskTime < pivotTime) {
+        right.push(task);
+      } else {
+        middle.push(task);
+      }
+    }
+  }
+
+  return [...quickSortTasks(left), ...middle, ...quickSortTasks(right)];
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
@@ -12,12 +62,13 @@ function App() {
     title: '',
     isLongTask: 'no',
     dueDate: '',
-    importanceLevel: 'Medium',
+    importanceLevel: '3',
   })
   const [taskMessage, setTaskMessage] = useState('')
   const [tasks, setTasks] = useState([])
   const [loadingTasks, setLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState('')
+  const [filterImportanceLevel, setFilterImportanceLevel] = useState('All')
   const [selectedTask, setSelectedTask] = useState(null)
   const [detailChecks, setDetailChecks] = useState({ completed: false, followUp: false, flagged: false })
   const [editingTask, setEditingTask] = useState(null)
@@ -25,7 +76,7 @@ function App() {
     title: '',
     isLongTask: 'no',
     dueDate: '',
-    importanceLevel: 'Medium',
+    importanceLevel: '3',
   })
 
   const storageKeyForUser = (u) => `taskDetailsStates_${u}`
@@ -63,7 +114,7 @@ function App() {
       title: task.title ?? task.Title ?? '',
       isLongTask: isLongTask ? 'yes' : 'no',
       dueDate: (task.dueDate ?? task.DueDate ?? '').toString().slice(0, 10),
-      importanceLevel: task.importanceLevel ?? task.ImportanceLevel ?? 'Medium',
+      importanceLevel: task.importanceLevel ?? task.ImportanceLevel ?? '3',
     })
     setActiveTab('edit')
   }
@@ -227,7 +278,7 @@ function App() {
         title: '',
         isLongTask: 'no',
         dueDate: '',
-        importanceLevel: 'Medium',
+        importanceLevel: '3',
       })
       setActiveTab('view')
     } catch (error) {
@@ -253,48 +304,80 @@ function App() {
   }
 
   useEffect(() => {
-    if (activeTab === 'view' || activeTab === 'portfolio') {
+    if (activeTab === 'view' || activeTab === 'portfolio' || activeTab === 'delete') {
       fetchTasks()
     }
   }, [activeTab, user])
 
-  const renderTaskTable = (heading) => (
-    <div>
-      <h2>{heading}</h2>
-      {loadingTasks ? (
-        <p>Loading tasks…</p>
-      ) : tasks.length === 0 ? (
-        <p>No tasks found yet.</p>
-      ) : (
-        <table className="tasks-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => (
-              <tr key={getTaskId(task)}>
-                <td>{task.title ?? task.Title}</td>
-                <td>{task.createdAt ?? task.CreatedAt}</td>
-                <td className="task-actions">
-                  <button type="button" onClick={() => openDetails(task)} className="view-details-button">
-                    View details
-                  </button>
-                  <button type="button" onClick={() => openEditTask(task)} className="view-details-button">
-                    Edit
-                  </button>
-                  <button type="button" onClick={() => handleDeleteTask(task)} className="view-details-button danger">
-                    Delete
-                  </button>
-                </td>
+  const renderTaskTable = (heading) => {
+    const filteredTasks = tasks.filter((task) => {
+      if (filterImportanceLevel === 'All') return true;
+      const level = task.importanceLevel ?? task.ImportanceLevel;
+      return getImportanceNumeric(level).toString() === filterImportanceLevel;
+    });
+
+    const sortedTasks = quickSortTasks(filteredTasks);
+
+    return (
+      <div>
+        <h2>{heading}</h2>
+        <div className="filter-container">
+          <label htmlFor="importance-filter" style={{ marginRight: '8px', fontWeight: 'bold' }}>
+            Filter by Importance:
+          </label>
+          <select
+            id="importance-filter"
+            value={filterImportanceLevel}
+            onChange={(e) => setFilterImportanceLevel(e.target.value)}
+            className="importance-filter-select"
+          >
+            <option value="All">All Levels</option>
+            <option value="1">1 - Lowest</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5 - Highest</option>
+          </select>
+        </div>
+
+        {loadingTasks ? (
+          <p>Loading tasks…</p>
+        ) : tasks.length === 0 ? (
+          <p>No tasks found yet.</p>
+        ) : sortedTasks.length === 0 ? (
+          <p>No tasks match the selected importance level.</p>
+        ) : (
+          <table className="tasks-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Importance</th>
+                <th>Created At</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {sortedTasks.map((task) => (
+                <tr key={getTaskId(task)}>
+                  <td>{task.title ?? task.Title}</td>
+                  <td>{task.importanceLevel ?? task.ImportanceLevel}</td>
+                  <td>{task.createdAt ?? task.CreatedAt}</td>
+                  <td className="task-actions">
+                    <button type="button" onClick={() => openDetails(task)} className="view-details-button">
+                      View details
+                    </button>
+                    <button type="button" onClick={() => openEditTask(task)} className="view-details-button">
+                      Edit
+                    </button>
+                    <button type="button" onClick={() => handleDeleteTask(task)} className="view-details-button danger">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
       {selectedTask && (
         <div className="task-details">
@@ -322,7 +405,8 @@ function App() {
         </div>
       )}
     </div>
-  )
+    );
+  };
 
   const HomePage = () => (
     <div className="home-page">
@@ -390,9 +474,11 @@ function App() {
             <label>
               Importance Level
               <select name="importanceLevel" value={taskForm.importanceLevel} onChange={handleTaskChange}>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
+                <option value="1">1 - Lowest</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5 - Highest</option>
               </select>
             </label>
 
@@ -448,9 +534,11 @@ function App() {
                 <label>
                   Importance Level
                   <select name="importanceLevel" value={editForm.importanceLevel} onChange={handleEditTaskChange}>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
+                    <option value="1">1 - Lowest</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5 - Highest</option>
                   </select>
                 </label>
 
@@ -469,6 +557,46 @@ function App() {
                 )}
               </>
             )}
+          </div>
+        ) : activeTab === 'delete' ? (
+          <div>
+            <h2>Delete a Task</h2>
+            <p style={{ marginBottom: '15px' }}>Below is the list of tasks. Select "Delete" next to a task to permanently remove it.</p>
+            {loadingTasks ? (
+              <p>Loading tasks…</p>
+            ) : tasks.length === 0 ? (
+              <p>No tasks found yet.</p>
+            ) : (
+              <table className="tasks-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Importance</th>
+                    <th>Created At</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quickSortTasks(tasks).map((task) => (
+                    <tr key={getTaskId(task)}>
+                      <td>{task.title ?? task.Title}</td>
+                      <td>{task.importanceLevel ?? task.ImportanceLevel}</td>
+                      <td>{task.createdAt ?? task.CreatedAt}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTask(task)}
+                          className="view-details-button danger"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {tasksError && <p className="task-message">{tasksError}</p>}
           </div>
         ) : (
           <>

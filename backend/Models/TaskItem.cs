@@ -16,7 +16,7 @@ public class TaskItem
     public DateTime? DueDate { get; set; }
 
     [Required]
-    public string ImportanceLevel { get; set; } = "Medium";
+    public string ImportanceLevel { get; set; } = "3";
 
     [Required]
     public string OwnerEmail { get; set; } = string.Empty;

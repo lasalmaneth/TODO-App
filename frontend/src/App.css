@@ -276,3 +276,38 @@ body {
     width: 100%;
   }
 }
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  margin-top: 15px;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(134, 239, 172, 0.1);
+  width: fit-content;
+}
+
+.filter-container label {
+  color: #b9eac5;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.importance-filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(134, 239, 172, 0.22);
+  background: rgba(8, 25, 15, 0.9);
+  color: #f3fff5;
+  font-size: 0.95rem;
+  outline: none;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.importance-filter-select:focus {
+  border-color: rgba(74, 222, 128, 0.72);
+}

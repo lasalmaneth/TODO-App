@@ -44,7 +44,7 @@ public class TasksController : ControllerBase
         }
 
         task.OwnerEmail = task.OwnerEmail.Trim().ToLowerInvariant();
-        task.ImportanceLevel = string.IsNullOrWhiteSpace(task.ImportanceLevel) ? "Medium" : task.ImportanceLevel;
+        task.ImportanceLevel = string.IsNullOrWhiteSpace(task.ImportanceLevel) ? "3" : task.ImportanceLevel;
         task.CreatedAt = DateTime.UtcNow;
 
         _context.TaskItems.Add(task);
