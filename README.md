@@ -1,6 +1,6 @@
 # Todo App
 
-A simple task management application with a React frontend and .NET Core backend.
+A simple task management application with a React frontend and .NET Core backend- Factn! software ....
 
 ## How to Run
 
