@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import { Pie } from 'react-chartjs-2'
 import Login from './components/Login'
 import Register from './components/Register'
 import './App.css'
+
+ChartJS.register(ArcElement, Tooltip, Legend)
 
 const getImportanceNumeric = (level) => {
   if (!level) return 3;
@@ -69,6 +73,7 @@ function App() {
   const [loadingTasks, setLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState('')
   const [filterImportanceLevel, setFilterImportanceLevel] = useState('All')
+  const [chartGroupBy, setChartGroupBy] = useState('importance')
   const [selectedTask, setSelectedTask] = useState(null)
   const [detailChecks, setDetailChecks] = useState({ completed: false, followUp: false, flagged: false })
   const [editingTask, setEditingTask] = useState(null)
@@ -78,11 +83,11 @@ function App() {
     dueDate: '',
     importanceLevel: '3',
   })
+  const [showNotifications, setShowNotifications] = useState(false)
 
   const storageKeyForUser = (u) => `taskDetailsStates_${u}`
 
-  const openDetails = (task) => {
-    setSelectedTask(task)
+  const getLocalTaskStatus = (task) => {
     try {
       const key = storageKeyForUser(user || 'default')
       const raw = localStorage.getItem(key)
@@ -90,15 +95,107 @@ function App() {
         const map = JSON.parse(raw)
         const id = task.id ?? task.Id
         if (map && map[id]) {
-          setDetailChecks(map[id])
-          return
+          return {
+            completed: map[id].completed ?? false,
+            followUp: map[id].followUp ?? false,
+            flagged: map[id].flagged ?? false
+          }
         }
       }
     } catch (e) {
       // ignore parse errors
     }
-    setDetailChecks({ completed: false, followUp: false, flagged: false })
+    return { completed: false, followUp: false, flagged: false }
   }
+
+  const openDetails = (task) => {
+    setSelectedTask(task)
+    setDetailChecks(getLocalTaskStatus(task))
+  }
+
+  const getChartData = () => {
+    const counts = {};
+    
+    tasks.forEach(task => {
+      let key = 'Unknown';
+      if (chartGroupBy === 'importance') {
+        const imp = getImportanceNumeric(task.importanceLevel ?? task.ImportanceLevel);
+        key = `Importance ${imp}`;
+      } else if (chartGroupBy === 'status') {
+        const status = getLocalTaskStatus(task);
+        key = status.completed ? 'Completed' : 'Pending';
+      } else if (chartGroupBy === 'type') {
+        const isLong = task.isLongTask ?? task.IsLongTask;
+        key = isLong ? 'Long Task' : 'Short Task';
+      } else if (chartGroupBy === 'flagged') {
+        const status = getLocalTaskStatus(task);
+        key = status.flagged ? 'Flagged' : 'Normal';
+      }
+      
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const labels = Object.keys(counts);
+    const data = Object.values(counts);
+
+    const backgroundColors = [
+      'rgba(34, 197, 94, 0.7)',
+      'rgba(59, 130, 246, 0.7)',
+      'rgba(245, 158, 11, 0.7)',
+      'rgba(239, 68, 68, 0.7)',
+      'rgba(168, 85, 247, 0.7)',
+      'rgba(236, 72, 153, 0.7)',
+    ];
+
+    const borderColors = [
+      'rgba(34, 197, 94, 1)',
+      'rgba(59, 130, 246, 1)',
+      'rgba(245, 158, 11, 1)',
+      'rgba(239, 68, 68, 1)',
+      'rgba(168, 85, 247, 1)',
+      'rgba(236, 72, 153, 1)',
+    ];
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: '# of Tasks',
+          data,
+          backgroundColor: backgroundColors.slice(0, labels.length),
+          borderColor: borderColors.slice(0, labels.length),
+          borderWidth: 1,
+        },
+      ],
+    };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#f3fff5',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const val = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = Math.round((val / total) * 100);
+            return ` ${context.label}: ${val} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };
 
   const toggleDetailCheck = (e) => {
     const { name, checked } = e.target
@@ -286,6 +383,26 @@ function App() {
     }
   }
 
+  const dueSoonTasks = tasks.filter(task => {
+    const isCompleted = getLocalTaskStatus(task).completed;
+    if (isCompleted) return false;
+    
+    const isLong = task.isLongTask ?? task.IsLongTask;
+    if (!isLong) return false;
+    
+    const dueDateStr = task.dueDate ?? task.DueDate;
+    if (!dueDateStr) return false;
+    
+    const dueDate = new Date(dueDateStr);
+    const now = new Date();
+    
+    // We count tasks that are overdue or due in the next 3 days
+    const diffTime = dueDate.getTime() - now.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    return diffDays <= 3;
+  });
+
   const fetchTasks = async () => {
     if (!user) return
     setLoadingTasks(true)
@@ -304,9 +421,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (activeTab === 'view' || activeTab === 'portfolio' || activeTab === 'delete') {
-      fetchTasks()
-    }
+    fetchTasks()
   }, [activeTab, user])
 
   const renderTaskTable = (heading) => {
@@ -400,7 +515,7 @@ function App() {
 
           <div style={{ marginTop: 10 }}>
             <button type="button" onClick={saveDetailChecks} className="task-submit-button">Save</button>
-            <button type="button" onClick={() => setSelectedTask(null)} style={{ marginLeft: 8 }}>Close</button>
+            <button type="button" onClick={() => setSelectedTask(null)} className="task-close-button">Close</button>
           </div>
         </div>
       )}
@@ -408,7 +523,7 @@ function App() {
     );
   };
 
-  const HomePage = () => (
+  const renderHomePage = () => (
     <div className="home-page">
       <div className="home-header">
         <div>
@@ -416,7 +531,53 @@ function App() {
           <h1>To-Do Home</h1>
           <p className="home-subtitle">Choose one of the actions below to manage your work.</p>
         </div>
-        <button className="logout-button" onClick={handleLogout}>Logout</button>
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+          <div className="notification-container" style={{ position: 'relative' }}>
+            <button 
+              type="button" 
+              className="notification-bell-btn" 
+              onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Notifications"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bell-svg">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              {dueSoonTasks.length > 0 && (
+                <span className="notification-badge">{dueSoonTasks.length}</span>
+              )}
+            </button>
+            {showNotifications && (
+              <div className="notification-dropdown">
+                <h4>Upcoming Due Tasks</h4>
+                {dueSoonTasks.length === 0 ? (
+                  <p className="no-notifications">No upcoming tasks are due soon.</p>
+                ) : (
+                  <ul className="notification-list">
+                    {dueSoonTasks.map(task => {
+                      const id = getTaskId(task);
+                      const title = task.title ?? task.Title;
+                      const dueDateStr = task.dueDate ?? task.DueDate;
+                      const dueDate = new Date(dueDateStr);
+                      const now = new Date();
+                      const isOverdue = dueDate < now;
+                      return (
+                        <li key={id} className="notification-item">
+                          <span className="notification-task-title">{title}</span>
+                          <span className={`notification-task-due ${isOverdue ? 'overdue' : ''}`}>
+                            {isOverdue ? 'Overdue: ' : 'Due: '}
+                            {dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+          <button className="logout-button" onClick={handleLogout}>Logout</button>
+        </div>
       </div>
 
       <div className="home-tabs" role="tablist" aria-label="Task actions">
@@ -492,8 +653,69 @@ function App() {
             {tasksError && <p className="task-message">{tasksError}</p>}
           </div>
         ) : activeTab === 'portfolio' ? (
-          <div>
-            {renderTaskTable('My Portfolio')}
+          <div className="portfolio-dashboard">
+            <div className="portfolio-grid">
+              <div className="portfolio-chart-card">
+                <h3>Task Breakdown</h3>
+                <p className="card-subtitle">Visualize your task statistics by different attributes.</p>
+                
+                <div className="chart-filter-row">
+                  <label htmlFor="chart-group-select">Group Chart By:</label>
+                  <select
+                    id="chart-group-select"
+                    value={chartGroupBy}
+                    onChange={(e) => setChartGroupBy(e.target.value)}
+                    className="chart-select"
+                  >
+                    <option value="importance">Importance Level</option>
+                    <option value="status">Completion Status</option>
+                    <option value="type">Task Length (Short/Long)</option>
+                    <option value="flagged">Flagged Status</option>
+                  </select>
+                </div>
+
+                <div className="chart-container-wrapper">
+                  {tasks.length === 0 ? (
+                    <p className="no-chart-data">No task data available to display chart.</p>
+                  ) : (
+                    <Pie data={getChartData()} options={chartOptions} />
+                  )}
+                </div>
+              </div>
+              
+              <div className="portfolio-stats-card">
+                <h3>Portfolio Summary</h3>
+                <p className="card-subtitle">Quick metrics of your current agenda.</p>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-val">{tasks.length}</span>
+                    <span className="stat-label">Total Tasks</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-val">
+                      {tasks.filter(t => getLocalTaskStatus(t).completed).length}
+                    </span>
+                    <span className="stat-label">Completed</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-val">
+                      {tasks.filter(t => getImportanceNumeric(t.importanceLevel ?? t.ImportanceLevel) === 5).length}
+                    </span>
+                    <span className="stat-label">Critical (5/5)</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-val">
+                      {tasks.filter(t => getLocalTaskStatus(t).flagged).length}
+                    </span>
+                    <span className="stat-label">Flagged</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="portfolio-table-section">
+              {renderTaskTable('My Portfolio Tasks')}
+            </div>
             {tasksError && <p className="task-message">{tasksError}</p>}
           </div>
         ) : activeTab === 'edit' ? (
@@ -625,7 +847,7 @@ function App() {
           path="/" 
           element={
             isAuthenticated ? (
-              <HomePage />
+              renderHomePage()
             ) : (
               <Navigate to="/login" />
             )
