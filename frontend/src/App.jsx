@@ -20,9 +20,6 @@ const getImportanceNumeric = (level) => {
   return isNaN(parsed) ? 3 : parsed;
 };
 
-// Custom Quick Sort implementation (DSA)
-// Sorts tasks by importance Level descending (highest importance/5 loads first)
-// If importance levels are equal, we sort by CreatedAt descending.
 function quickSortTasks(arr) {
   if (arr.length <= 1) return arr;
 
@@ -39,12 +36,10 @@ function quickSortTasks(arr) {
     const taskTime = new Date(task.createdAt ?? task.CreatedAt ?? 0).getTime();
 
     if (taskImportance > pivotImportance) {
-      // Higher importance should load first, so place on the left (descending order)
       left.push(task);
     } else if (taskImportance < pivotImportance) {
       right.push(task);
     } else {
-      // If importance level is equal, compare by created date descending (newest first)
       if (taskTime > pivotTime) {
         left.push(task);
       } else if (taskTime < pivotTime) {
@@ -766,7 +761,7 @@ function App() {
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button type="submit" className="task-submit-button">Update Task</button>
-                  <button type="button" onClick={() => setEditingTask(null)}>Cancel</button>
+                  <button type="button" onClick={() => setEditingTask(null)} className="task-close-button" style={{ marginLeft: 0 }}>Cancel</button>
                 </div>
               </form>
             ) : (

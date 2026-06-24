@@ -1,0 +1,26 @@
+# Core
+.DS_Store
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+.env*
+
+# .NET / Backend
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Database
+backend/todos.db
+backend/todos.db-journal
+backend/todos.db-shm
+backend/todos.db-wal
